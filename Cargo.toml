@@ -1,0 +1,8 @@
+[package]
+name = "scan_fmt"
+version = "0.1.0"
+authors = ["wlentz"]
+
+[lib]
+name = "scan_fmt"
+path = "src/lib.rs"
