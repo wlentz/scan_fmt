@@ -1,4 +1,4 @@
-# scan_fmt
+# scan_fmt ![BuildStatus](https://travis-ci.org/wlentz/scan_fmt.svg?branch=master)
 scan_fmt provides a simple scanf()-like input for Rust.  The goal is to make it easier to read data from a string or stdin.
 
 Currently the format string only supports the following special sequences:
