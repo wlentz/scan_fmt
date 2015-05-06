@@ -1,12 +1,22 @@
 # scan_fmt ![BuildStatus](https://travis-ci.org/wlentz/scan_fmt.svg?branch=master)
 scan_fmt provides a simple scanf()-like input for Rust.  The goal is to make it easier to read data from a string or stdin.
 
-Currently the format string only supports the following special sequences:
+Currently the format string supports the following special sequences:
 <pre>
- {} = read input until next character or whitespace
- {{ = escaped {
- }} = escaped }</pre>
-The plan is to add more format conversions (e.g., {[0-9]} to read numbers).
+   {{ = escape for '{'
+   }} = escape for '}'
+   {} = return any value (until next whitespace)
+   {d} = return base-10 decimal
+   {x} = return hex (0xab or ab)
+   {f} = return float
+   {*d} = "*" as the first character means "match but don't return"
+   {[...]} = return pattern.
+     ^ inverts if it is the first character
+     - is for ranges.  For a literal - put it at the start or end.
+     To add a literal ] do "[]abc]"
+   Examples:
+     {[0-9ab]} = match 0-9 or a or b
+     {[^,.]} = match anything but , or .</pre>
 
 ### Examples
 ```
@@ -20,7 +30,7 @@ The plan is to add more format conversions (e.g., {[0-9]} to read numbers).
    assert_eq!( c.unwrap(), "bye" ) ;
 
    println!("Enter something like: 123-22");
-   let (c,d) = scanln_fmt!( "{}-{}",   // format
+   let (c,d) = scanln_fmt!( "{d}-{d}", // format
                             u16, u8);  // type of a&b Options
    match (c,d) {
      (Some(cc),Some(dd)) => println!("Got {} and {}",cc,dd),

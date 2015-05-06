@@ -16,7 +16,7 @@
 //! # #[macro_use] extern crate scan_fmt;
 //! # fn main() {
 //!   let (a,b,c) = scan_fmt!( "hello 12 345 bye", // input string
-//!                            "hello {} {} {}",   // format
+//!                            "hello {} {d} {}",  // format
 //!                            u8, i32, String);   // type of a-c Options
 //!   assert_eq!( a.unwrap(), 12 ) ;
 //!   assert_eq!( b.unwrap(), 345 ) ;
@@ -26,9 +26,20 @@
 //!
 //! Special format_string tokens:
 //! <pre class="rust">
-//!   {} = return a value
 //!   {{ = escape for '{'
 //!   }} = escape for '}'
+//!   {} = return any value (until next whitespace)
+//!   {d} = return base-10 decimal
+//!   {x} = return hex (0xab or ab)
+//!   {f} = return float
+//!   {*d} = "*" as the first character means "match but don't return"
+//!   {[...]} = return pattern.
+//!     ^ inverts if it is the first character
+//!     - is for ranges.  For a literal - put it at the start or end.
+//!     To add a literal ] do "[]abc]"
+//!   Examples:
+//!     {[0-9ab]} = match 0-9 or a or b
+//!     {[^,.]} = match anything but , or .
 //! </pre>
 //!
 //! Example to read from stdin:
@@ -37,7 +48,7 @@
 //! # #[macro_use] extern crate scan_fmt;
 //! # fn main() {
 //!   let (a,b) = scanln_fmt!( "{}-{}",   // format
-//!                            u16, u8);  // type of a&b Options
+//!                            u16, u8);    // type of a&b Options
 //!   match (a,b) {
 //!     (Some(aa),Some(bb)) => println!("Got {} and {}",aa,bb),
 //!     _ => println!("input error")
@@ -51,20 +62,8 @@
 //! return values will be None.
 //!
 //! Like sscanf(), whitespace (including \n) is largely ignored.
-//! For example:
 //!
-//! ```rust
-//! # #[macro_use] extern crate scan_fmt;
-//! # fn main() {
-//!   let a = scan_fmt!( "company: Acme ABC", // input string
-//!                      "company: {}",       // format
-//!                      String);             // type of 'a'
-//!   assert_eq!( a.unwrap(), "Acme" ) ;
-//! # }
-//! ```
-//! This will eventually get fixed by adding format specifiers.
-//!
-//! Conversion to output values is done using parse().
+//! Conversion to output values is done using parse::<T>().
 
 pub mod parse ;
 
@@ -117,21 +116,30 @@ macro_rules! assert_flt_eq {
 
 #[test]
 fn test_limited_data_range() {
-    let (a,b,c) = scan_fmt!("test{\t 1e9 \n bye 257} hi  22.7",
-                            "test{{ {} bye {}}} hi {}",
+    let (a,b,c) = scan_fmt!("test{\t 1e9 \n bye 257} hi  22.7e-1",
+                            "test{{ {} bye {d}}} hi {f}",
                             f64,u8,f32) ;
     assert_flt_eq!( f64, a.unwrap(), 1e9 );
     assert_eq!( b, None ); // 257 doesn't fit into a u8
-    assert_flt_eq!( f32, c.unwrap(), 22.7 );
+    assert_flt_eq!( f32, c.unwrap(), 2.27 );
 }
 
 #[test]
 fn test_too_many_outputs() {
-    let (a,b,c,d) = scan_fmt!("a b c",
-                              "{} {} {}",
+    let (a,b,c,d) = scan_fmt!("a_aa bb_b c",
+                              "{} {s} {}",
                               String, String, String, String) ;
-    assert_eq!( a.unwrap(), "a" );
-    assert_eq!( b.unwrap(), "b" );
+    assert_eq!( a.unwrap(), "a_aa" );
+    assert_eq!( b.unwrap(), "bb_b" );
     assert_eq!( c.unwrap(), "c" );
     assert_eq!( d, None );
+}
+
+#[test]
+fn test_skip_assign() {
+    let (a,b) = scan_fmt!("1 2 3, 4 5, 6 7",
+                          "{[^,]},{*[^,]},{[^,]}",
+                          String, String) ;
+    assert_eq!( a.unwrap(), "1 2 3" );
+    assert_eq!( b.unwrap(), "6 7" );
 }
