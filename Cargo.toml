@@ -2,6 +2,10 @@
 name = "scan_fmt"
 version = "0.1.0"
 authors = ["wlentz"]
+description = "A simple scanf()-like input for Rust"
+repository = "https://github.com/wlentz/scan_fmt"
+license = "MIT"
+readme = "README.md"
 
 [lib]
 name = "scan_fmt"
