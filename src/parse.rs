@@ -236,13 +236,20 @@ fn scan_pattern(vs : &mut VecScanner, fmt : &mut FmtResult )
 // return data matching the format from user input (else "")
 fn get_token( vs : &mut VecScanner, fmt : &mut FmtResult ) -> String
 {
-    let pos_start = vs.pos ;
+    let mut pos_start = vs.pos ;
     match fmt.data_type {
         FmtType::NonWhitespaceOrEnd => scan_nonws_or_end( vs, fmt.end_char ),
         FmtType::Pattern => scan_pattern( vs, fmt ),
         FmtType::Dec10 => scan_dec10( vs ),
         FmtType::Hex16 => scan_hex16( vs ),
         FmtType::Flt => scan_float( vs ),
+    }
+    if fmt.data_type == FmtType::Dec10 || fmt.data_type == FmtType::Flt
+    {
+        // parse<i32/f32> won't accept "+" in front of numbers
+        if vs.data[pos_start] == '+' {
+            pos_start += 1 ;
+        }
     }
     vs.data[pos_start..vs.pos].iter().cloned().collect()
 }
@@ -304,6 +311,14 @@ fn test_simple() {
 }
 
 #[test]
+fn test_plus_sign() {
+    let mut res = scan("+42","{d}");
+    assert_eq!( res.next().unwrap(), "42" ) ;
+    let mut res = scan("+42.7","{f}");
+    assert_eq!( res.next().unwrap(), "42.7" ) ;
+}
+
+#[test]
 fn test_complex() {
     let mut res
         = scan("test{123  bye -456} hi  -22.7e-1 +1.23fg",
@@ -311,7 +326,7 @@ fn test_complex() {
     assert_eq!( res.next().unwrap(), "123" ) ;
     assert_eq!( res.next().unwrap(), "-456" ) ;
     assert_eq!( res.next().unwrap(), "-22.7e-1" ) ;
-    assert_eq!( res.next().unwrap(), "+1.23" ) ;
+    assert_eq!( res.next().unwrap(), "1.23" ) ;
     assert_eq!( res.next(), None ) ;
 }
 

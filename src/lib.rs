@@ -115,6 +115,14 @@ macro_rules! assert_flt_eq {
 }
 
 #[test]
+fn test_plus_sign() {
+    let a = scan_fmt!("+42","{d}",i32);
+    assert_eq!( a, Some(42) );
+    let a = scan_fmt!("+42.0","{f}",f64);
+    assert_flt_eq!( f64, a.unwrap(), 42.0 );
+}
+
+#[test]
 fn test_limited_data_range() {
     let (a,b,c) = scan_fmt!("test{\t 1e9 \n bye 257} hi  22.7e-1",
                             "test{{ {} bye {d}}} hi {f}",
