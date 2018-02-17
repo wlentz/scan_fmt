@@ -65,7 +65,7 @@
 //!
 //! Conversion to output values is done using parse::<T>().
 
-pub mod parse ;
+pub mod parse;
 
 /// (a,+) = scan_fmt!( input_string, format_string, types,+ )
 #[macro_export]
@@ -97,8 +97,8 @@ macro_rules! scan_fmt {
 }
 
 pub fn get_input_unwrap() -> String {
-    let mut input = String::new() ;
-    std::io::stdin().read_line(&mut input).unwrap() ;
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
     input
 }
 
@@ -116,38 +116,38 @@ macro_rules! assert_flt_eq {
 
 #[test]
 fn test_plus_sign() {
-    let a = scan_fmt!("+42","{d}",i32);
-    assert_eq!( a, Some(42) );
-    let a = scan_fmt!("+42.0","{f}",f64);
-    assert_flt_eq!( f64, a.unwrap(), 42.0 );
+    let a = scan_fmt!("+42", "{d}", i32);
+    assert_eq!(a, Some(42));
+    let a = scan_fmt!("+42.0", "{f}", f64);
+    assert_flt_eq!(f64, a.unwrap(), 42.0);
 }
 
 #[test]
 fn test_limited_data_range() {
-    let (a,b,c) = scan_fmt!("test{\t 1e9 \n bye 257} hi  22.7e-1",
-                            "test{{ {} bye {d}}} hi {f}",
-                            f64,u8,f32) ;
-    assert_flt_eq!( f64, a.unwrap(), 1e9 );
-    assert_eq!( b, None ); // 257 doesn't fit into a u8
-    assert_flt_eq!( f32, c.unwrap(), 2.27 );
+    let (a, b, c) = scan_fmt!(
+        "test{\t 1e9 \n bye 257} hi  22.7e-1",
+        "test{{ {} bye {d}}} hi {f}",
+        f64,
+        u8,
+        f32
+    );
+    assert_flt_eq!(f64, a.unwrap(), 1e9);
+    assert_eq!(b, None); // 257 doesn't fit into a u8
+    assert_flt_eq!(f32, c.unwrap(), 2.27);
 }
 
 #[test]
 fn test_too_many_outputs() {
-    let (a,b,c,d) = scan_fmt!("a_aa bb_b c",
-                              "{} {s} {}",
-                              String, String, String, String) ;
-    assert_eq!( a.unwrap(), "a_aa" );
-    assert_eq!( b.unwrap(), "bb_b" );
-    assert_eq!( c.unwrap(), "c" );
-    assert_eq!( d, None );
+    let (a, b, c, d) = scan_fmt!("a_aa bb_b c", "{} {s} {}", String, String, String, String);
+    assert_eq!(a.unwrap(), "a_aa");
+    assert_eq!(b.unwrap(), "bb_b");
+    assert_eq!(c.unwrap(), "c");
+    assert_eq!(d, None);
 }
 
 #[test]
 fn test_skip_assign() {
-    let (a,b) = scan_fmt!("1 2 3, 4 5, 6 7",
-                          "{[^,]},{*[^,]},{[^,]}",
-                          String, String) ;
-    assert_eq!( a.unwrap(), "1 2 3" );
-    assert_eq!( b.unwrap(), "6 7" );
+    let (a, b) = scan_fmt!("1 2 3, 4 5, 6 7", "{[^,]},{*[^,]},{[^,]}", String, String);
+    assert_eq!(a.unwrap(), "1 2 3");
+    assert_eq!(b.unwrap(), "6 7");
 }
