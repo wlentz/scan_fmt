@@ -7,6 +7,9 @@ repository = "https://github.com/wlentz/scan_fmt"
 license = "MIT"
 readme = "README.md"
 
+[dependencies]
+regex = "0.2.6"
+
 [lib]
 name = "scan_fmt"
 path = "src/lib.rs"

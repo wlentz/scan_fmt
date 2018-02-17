@@ -16,10 +16,19 @@ Currently the format string supports the following special sequences:
      To add a literal ] do "[]abc]"
    Examples:
      {[0-9ab]} = match 0-9 or a or b
-     {[^,.]} = match anything but , or .</pre>
+     {[^,.]} = match anything but , or .
+   {/.../} = return regex inside of `//`.
+     If there is a single capture group inside of the slashes then
+     that group will make up the pattern.
+   Examples:
+     {/[0-9ab]/} = same as {[0-9]ab}, above
+     {/a+/} = matches at least one `a`, greedily
+     {/jj(a*)jj/} = matches any number of `a`s, but only if
+       they're surrounded by two `j`s
+</pre>
 
 ### Examples
-```
+```rust
  #[macro_use] extern crate scan_fmt;
  fn main() {
    let (a,b,c) = scan_fmt!( "hello 12 345 bye", // input string

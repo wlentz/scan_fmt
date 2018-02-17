@@ -2,6 +2,8 @@
 // Licensed under the MIT license.
 use std;
 
+use regex::Regex;
+
 // Handle the following format strings:
 // {}X -> everything until whitespace or next character 'X'
 // {s} -> everything until whitespace
@@ -74,6 +76,7 @@ enum FmtType {
     Dec10,
     Hex16,
     Flt,
+    Regex,
 }
 
 struct FmtResult {
@@ -84,6 +87,7 @@ struct FmtResult {
     // Store pattern characters and ranges.  It might be worth
     // optimizing this if format strings are long.
     char_list: Vec<(char, char)>,
+    regex: Option<Regex>,
 }
 
 // See top-level docs for allowed formats.
@@ -96,6 +100,7 @@ fn get_format(fstr: &mut VecScanner) -> Option<FmtResult> {
         store_result: true,
         invert_char_list: false,
         char_list: vec![],
+        regex: None,
     };
     if fstr.cur() == '*' {
         res.store_result = false;
@@ -125,20 +130,29 @@ fn get_format(fstr: &mut VecScanner) -> Option<FmtResult> {
         '[' => {
             res.data_type = FmtType::Pattern;
         }
+        '/' => {
+            res.data_type = FmtType::Regex;
+        }
         _ => return None, // unexpected format
     }
     if !fstr.inc() {
         return None;
     }
 
-    if res.data_type != FmtType::Pattern {
-        if fstr.cur() != '}' {
-            return None;
+    match res.data_type {
+        FmtType::Pattern => handle_pattern(res, fstr),
+        FmtType::Regex => handle_regex(res, fstr),
+        _ => {
+            if fstr.cur() != '}' {
+                return None;
+            }
+            fstr.inc();
+            Some(res)
         }
-        fstr.inc();
-        return Some(res);
     }
+}
 
+fn handle_pattern(mut res: FmtResult, fstr: &mut VecScanner) -> Option<FmtResult> {
     // handle [] pattern
     res.data_type = FmtType::Pattern;
 
@@ -185,6 +199,47 @@ fn get_format(fstr: &mut VecScanner) -> Option<FmtResult> {
         return None;
     }
     fstr.inc(); // go past closing '}'
+
+    Some(res)
+}
+
+fn handle_regex(mut res: FmtResult, fstr: &mut VecScanner) -> Option<FmtResult> {
+    let start = fstr.pos;
+    let mut last_was_escape = false;
+    while fstr.inc() {
+        if fstr.cur() == '/' && !last_was_escape {
+            break;
+        }
+
+        if fstr.cur() == '\\' {
+            last_was_escape = true;
+        } else {
+            last_was_escape = false;
+        }
+    }
+    if fstr.cur() != '/' {
+        // invalid
+        return None;
+    }
+
+    let substr = Some('^')
+        .into_iter()
+        .chain(fstr.data[start..fstr.pos].iter().cloned())
+        .collect::<String>();
+
+    if let Ok(re) = Regex::new(&substr) {
+        res.regex = Some(re);
+    } else {
+        return None;
+    }
+
+    // consume close
+    fstr.inc();
+    if fstr.cur() != '}' {
+        return None;
+    }
+    fstr.inc();
+
     Some(res)
 }
 
@@ -281,15 +336,48 @@ fn scan_pattern(vs: &mut VecScanner, fmt: &mut FmtResult) {
     }
 }
 
+enum ReMatch {
+    Captured { len: usize },
+    NoCapture,
+}
+
+fn scan_regex(vs: &mut VecScanner, fmt: &mut FmtResult) -> ReMatch {
+    let re = fmt.regex.take().unwrap();
+    let remainder = vs.data[vs.pos..].iter().cloned().collect::<String>();
+    if let Some(mat) = re.captures(&remainder) {
+        vs.pos += mat.get(0).unwrap().end();
+        eprintln!("got match: '{}'", mat.get(0).unwrap().as_str());
+        if let Some(cap) = mat.get(1) {
+            eprintln!("got capture: {:?} '{}'", cap, cap.as_str());
+            return ReMatch::Captured {
+                len: cap.end(),
+            };
+        }
+    }
+    return ReMatch::NoCapture;
+}
+
 // return data matching the format from user input (else "")
 fn get_token(vs: &mut VecScanner, fmt: &mut FmtResult) -> String {
     let mut pos_start = vs.pos;
     match fmt.data_type {
         FmtType::NonWhitespaceOrEnd => scan_nonws_or_end(vs, fmt.end_char),
-        FmtType::Pattern => scan_pattern(vs, fmt),
         FmtType::Dec10 => scan_dec10(vs),
         FmtType::Hex16 => scan_hex16(vs),
         FmtType::Flt => scan_float(vs),
+        FmtType::Pattern => scan_pattern(vs, fmt),
+        FmtType::Regex => {
+            // if the regex has an internal group then we want to use the group
+            // to select the substring, but either way the scan_regex function
+            // will set pos to the end of the entire match consumed by the
+            // regex
+            match scan_regex(vs, fmt) {
+                ReMatch::Captured { len } => {
+                    return vs.data[pos_start..pos_start + len].iter().cloned().collect();
+                }
+                ReMatch::NoCapture => {}
+            }
+        }
     }
     if fmt.data_type == FmtType::Dec10 || fmt.data_type == FmtType::Flt {
         // parse<i32/f32> won't accept "+" in front of numbers
@@ -425,4 +513,37 @@ fn test_pattern() {
     let mut res = scan("xyz  01234567λ89", "xyz {[40-3]}{*[65]}{[7-78-9λ]}");
     assert_eq!(res.next().unwrap(), "01234");
     assert_eq!(res.next().unwrap(), "7λ89");
+}
+
+#[cfg(test)]
+mod test_regex {
+    use super::scan;
+
+    #[test]
+    fn simple() {
+        let mut res = scan("one (hello) two", "one ({/[^)]+/}) two");
+        assert_eq!(res.next().unwrap(), "hello");
+    }
+
+    #[test]
+    fn mixed_regex_and_pattern() {
+        let mut res = scan("one ((hello)) two", r#"one ({/[^)]+\)?/}) two"#);
+        assert_eq!(res.next().unwrap(), "(hello)");
+    }
+
+    #[test]
+    fn bad_pattern() {
+        // note the extra close paren
+        let mut scanner = scan("one (hello)) two", "one ({/[^)]+/}) two");
+        assert_eq!(scanner.next().unwrap(), "hello");
+        if let Some(v) = scanner.next() {
+            println!("got something unexpected on second iter: {:?}", v);
+        }
+    }
+
+    #[test]
+    fn uses_group_if_present() {
+        let mut res = scan("one (((hello))) two", r#"one {/(\(.*\)) /}two"#);
+        assert_eq!(res.next().unwrap(), "(((hello)))");
+    }
 }

@@ -40,6 +40,14 @@
 //!   Examples:
 //!     {[0-9ab]} = match 0-9 or a or b
 //!     {[^,.]} = match anything but , or .
+//!   {/.../} = return regex inside of `//`.
+//!     If there is a single capture group inside of the slashes then
+//!     that group will make up the pattern.
+//!   Examples:
+//!     {/[0-9ab]/} = same as {[0-9]ab}, above
+//!     {/a+/} = matches at least one `a`, greedily
+//!     {/jj(a*)jj/} = matches any number of `a`s, but only if
+//!       they're surrounded by two `j`s
 //! </pre>
 //!
 //! Example to read from stdin:
@@ -64,6 +72,8 @@
 //! Like sscanf(), whitespace (including \n) is largely ignored.
 //!
 //! Conversion to output values is done using parse::<T>().
+
+extern crate regex;
 
 pub mod parse;
 
@@ -109,6 +119,7 @@ macro_rules! scanln_fmt {
     ($($arg:tt)*) => {{ scan_fmt!(&$crate::get_input_unwrap(), $($arg)*) }}
 }
 
+#[cfg(test)]
 macro_rules! assert_flt_eq {
     ($t:ident, $v1:expr, $v2:expr) =>
     {{ assert!( ($v1 - $v2).abs() <= 2.0*std::$t::EPSILON ); }};
