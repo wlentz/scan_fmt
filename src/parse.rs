@@ -346,9 +346,7 @@ fn scan_regex(vs: &mut VecScanner, fmt: &mut FmtResult) -> ReMatch {
     let remainder = vs.data[vs.pos..].iter().cloned().collect::<String>();
     if let Some(mat) = re.captures(&remainder) {
         vs.pos += mat.get(0).unwrap().end();
-        eprintln!("got match: '{}'", mat.get(0).unwrap().as_str());
         if let Some(cap) = mat.get(1) {
-            eprintln!("got capture: {:?} '{}'", cap, cap.as_str());
             return ReMatch::Captured {
                 len: cap.end(),
             };
