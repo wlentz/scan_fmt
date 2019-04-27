@@ -1,8 +1,31 @@
-// Copyright 2015 Will Lentz.
+// Copyright 2015-2019 Will Lentz.
 // Licensed under the MIT license.
 use std;
 
 use regex::Regex;
+
+#[derive(Debug, PartialEq)]
+enum FmtType {
+    NonWhitespaceOrEnd,
+    Pattern,
+    Dec10,
+    Hex16,
+    Flt,
+    Regex,
+}
+
+use std::{error::Error, fmt};
+
+#[derive(Debug)]
+pub struct ScanError(pub String);
+
+impl Error for ScanError {}
+
+impl fmt::Display for ScanError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Scan error: {}", self.0)
+    }
+}
 
 // Handle the following format strings:
 // {}X -> everything until whitespace or next character 'X'
@@ -69,15 +92,6 @@ fn skip_whitespace(vs: &mut VecScanner) -> bool {
     !vs.is_end()
 }
 
-#[derive(Debug, PartialEq)]
-enum FmtType {
-    NonWhitespaceOrEnd,
-    Pattern,
-    Dec10,
-    Hex16,
-    Flt,
-    Regex,
-}
 
 struct FmtResult {
     data_type: FmtType,
@@ -416,7 +430,12 @@ pub fn scan(input_string: &str, format: &str) -> std::vec::IntoIter<String> {
                 let mut fmt = fmt.unwrap();
                 let data = get_token(&mut instr, &mut fmt);
                 if fmt.store_result {
-                    res.push(data);
+		   if fmt.data_type == FmtType::Hex16 {
+		       let no_prefix = data.trim_left_matches("0x");
+   		       res.push(no_prefix.to_string()) ;
+		   } else {
+   		       res.push(data) ;
+		   }
                 }
                 do_compare = false;
             }
@@ -483,7 +502,7 @@ fn test_endline() {
 #[test]
 fn test_hex() {
     let mut res = scan("hi 0x15 ff fg", "hi {x} {x} {x}");
-    assert_eq!(res.next().unwrap(), "0x15");
+    assert_eq!(res.next().unwrap(), "15");
     assert_eq!(res.next().unwrap(), "ff");
     assert_eq!(res.next().unwrap(), "f");
 }
