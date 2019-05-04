@@ -51,7 +51,7 @@
 //!   Examples:
 //!     {[0-9ab]} = match 0-9 or a or b
 //!     {[^,.]} = match anything but , or .
-//!     {/.../} = return regex inside of `//`.
+//!     {/.../} = return regex inside of `//`. (if regex feature is installed)
 //!      If there is a single capture group inside of the slashes then
 //!      that group will make up the pattern.
 //!   Examples:
@@ -89,6 +89,7 @@
 //!
 //! Conversion to output values is done using parse::<T>().
 
+#[cfg(feature = "regex")]
 extern crate regex;
 
 pub mod parse;

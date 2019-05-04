@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 use std;
 
+#[cfg(feature = "regex")]
 use regex::Regex;
 
 #[derive(Debug, PartialEq)]
@@ -11,6 +12,7 @@ enum FmtType {
     Dec10,
     Hex16,
     Flt,
+    #[cfg(feature = "regex")]
     Regex,
 }
 
@@ -101,6 +103,7 @@ struct FmtResult {
     // Store pattern characters and ranges.  It might be worth
     // optimizing this if format strings are long.
     char_list: Vec<(char, char)>,
+    #[cfg(feature = "regex")]
     regex: Option<Regex>,
 }
 
@@ -114,6 +117,7 @@ fn get_format(fstr: &mut VecScanner) -> Option<FmtResult> {
         store_result: true,
         invert_char_list: false,
         char_list: vec![],
+	#[cfg(feature = "regex")]
         regex: None,
     };
     if fstr.cur() == '*' {
@@ -144,6 +148,7 @@ fn get_format(fstr: &mut VecScanner) -> Option<FmtResult> {
         '[' => {
             res.data_type = FmtType::Pattern;
         }
+	#[cfg(feature = "regex")]
         '/' => {
             res.data_type = FmtType::Regex;
         }
@@ -155,6 +160,7 @@ fn get_format(fstr: &mut VecScanner) -> Option<FmtResult> {
 
     match res.data_type {
         FmtType::Pattern => handle_pattern(res, fstr),
+	#[cfg(feature = "regex")]
         FmtType::Regex => handle_regex(res, fstr),
         _ => {
             if fstr.cur() != '}' {
@@ -217,6 +223,7 @@ fn handle_pattern(mut res: FmtResult, fstr: &mut VecScanner) -> Option<FmtResult
     Some(res)
 }
 
+#[cfg(feature = "regex")]
 fn handle_regex(mut res: FmtResult, fstr: &mut VecScanner) -> Option<FmtResult> {
     let start = fstr.pos;
     let mut last_was_escape = false;
@@ -350,11 +357,13 @@ fn scan_pattern(vs: &mut VecScanner, fmt: &mut FmtResult) {
     }
 }
 
+#[cfg(feature = "regex")]
 enum ReMatch {
     Captured { len: usize },
     NoCapture,
 }
 
+#[cfg(feature = "regex")]
 fn scan_regex(vs: &mut VecScanner, fmt: &mut FmtResult) -> ReMatch {
     let re = fmt.regex.take().unwrap();
     let remainder = vs.data[vs.pos..].iter().cloned().collect::<String>();
@@ -378,6 +387,7 @@ fn get_token(vs: &mut VecScanner, fmt: &mut FmtResult) -> String {
         FmtType::Hex16 => scan_hex16(vs),
         FmtType::Flt => scan_float(vs),
         FmtType::Pattern => scan_pattern(vs, fmt),
+	#[cfg(feature = "regex")]
         FmtType::Regex => {
             // if the regex has an internal group then we want to use the group
             // to select the substring, but either way the scan_regex function
