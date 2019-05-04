@@ -94,7 +94,6 @@ fn skip_whitespace(vs: &mut VecScanner) -> bool {
     !vs.is_end()
 }
 
-
 struct FmtResult {
     data_type: FmtType,
     store_result: bool,
@@ -117,7 +116,7 @@ fn get_format(fstr: &mut VecScanner) -> Option<FmtResult> {
         store_result: true,
         invert_char_list: false,
         char_list: vec![],
-	#[cfg(feature = "regex")]
+        #[cfg(feature = "regex")]
         regex: None,
     };
     if fstr.cur() == '*' {
@@ -148,7 +147,7 @@ fn get_format(fstr: &mut VecScanner) -> Option<FmtResult> {
         '[' => {
             res.data_type = FmtType::Pattern;
         }
-	#[cfg(feature = "regex")]
+        #[cfg(feature = "regex")]
         '/' => {
             res.data_type = FmtType::Regex;
         }
@@ -160,7 +159,7 @@ fn get_format(fstr: &mut VecScanner) -> Option<FmtResult> {
 
     match res.data_type {
         FmtType::Pattern => handle_pattern(res, fstr),
-	#[cfg(feature = "regex")]
+        #[cfg(feature = "regex")]
         FmtType::Regex => handle_regex(res, fstr),
         _ => {
             if fstr.cur() != '}' {
@@ -370,9 +369,7 @@ fn scan_regex(vs: &mut VecScanner, fmt: &mut FmtResult) -> ReMatch {
     if let Some(mat) = re.captures(&remainder) {
         vs.pos += mat.get(0).unwrap().end();
         if let Some(cap) = mat.get(1) {
-            return ReMatch::Captured {
-                len: cap.end(),
-            };
+            return ReMatch::Captured { len: cap.end() };
         }
     }
     return ReMatch::NoCapture;
@@ -387,7 +384,7 @@ fn get_token(vs: &mut VecScanner, fmt: &mut FmtResult) -> String {
         FmtType::Hex16 => scan_hex16(vs),
         FmtType::Flt => scan_float(vs),
         FmtType::Pattern => scan_pattern(vs, fmt),
-	#[cfg(feature = "regex")]
+        #[cfg(feature = "regex")]
         FmtType::Regex => {
             // if the regex has an internal group then we want to use the group
             // to select the substring, but either way the scan_regex function
@@ -395,7 +392,10 @@ fn get_token(vs: &mut VecScanner, fmt: &mut FmtResult) -> String {
             // regex
             match scan_regex(vs, fmt) {
                 ReMatch::Captured { len } => {
-                    return vs.data[pos_start..pos_start + len].iter().cloned().collect();
+                    return vs.data[pos_start..pos_start + len]
+                        .iter()
+                        .cloned()
+                        .collect();
                 }
                 ReMatch::NoCapture => {}
             }
@@ -440,12 +440,12 @@ pub fn scan(input_string: &str, format: &str) -> std::vec::IntoIter<String> {
                 let mut fmt = fmt.unwrap();
                 let data = get_token(&mut instr, &mut fmt);
                 if fmt.store_result {
-		   if fmt.data_type == FmtType::Hex16 {
-		       let no_prefix = data.trim_left_matches("0x");
-   		       res.push(no_prefix.to_string()) ;
-		   } else {
-   		       res.push(data) ;
-		   }
+                    if fmt.data_type == FmtType::Hex16 {
+                        let no_prefix = data.trim_left_matches("0x");
+                        res.push(no_prefix.to_string());
+                    } else {
+                        res.push(data);
+                    }
                 }
                 do_compare = false;
             }

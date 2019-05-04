@@ -98,41 +98,47 @@ pub mod parse;
 macro_rules! scan_fmt_help {
     ( wrap $res:expr, [hex $arg:tt] ) => {
         match $res.next() {
-            Some(item) => {
-		$arg::from_str_radix(&item,16).ok()
-            },
-            _ => None
+            Some(item) => $arg::from_str_radix(&item, 16).ok(),
+            _ => None,
         }
     };
     ( wrap $res:expr , $arg1:tt ) => {
         match $res.next() {
             Some(item) => item.parse::<$arg1>().ok(),
-            _ => None
+            _ => None,
         }
     };
     ( no_wrap $err:ident, $res:expr, [hex $arg:tt] ) => {
         match $res.next() {
             Some(item) => {
-		let ret = $arg::from_str_radix(&item,16) ;
-		if ret.is_err() { $err = "from_str_radix hex"; }
-		ret.unwrap_or(0)
-            },
-            _ => { $err="internal hex"; 0 }
+                let ret = $arg::from_str_radix(&item, 16);
+                if ret.is_err() {
+                    $err = "from_str_radix hex";
+                }
+                ret.unwrap_or(0)
+            }
+            _ => {
+                $err = "internal hex";
+                0
+            }
         }
     };
     ( no_wrap $err:ident, $res:expr , $arg1:tt ) => {{
-        let err = "0".parse::<$arg1>().unwrap() ;
+        let err = "0".parse::<$arg1>().unwrap();
         match $res.next() {
             Some(item) => {
-	        let ret = item.parse::<$arg1>() ;
-		if ret.is_err() {
-		    $err = concat!("parse::",stringify!($arg1));
-		}
-		ret.unwrap_or(err)
-	    },
-            _ => { $err = concat!("internal ",stringify!($arg1)); err }
-        }}
-    };
+                let ret = item.parse::<$arg1>();
+                if ret.is_err() {
+                    $err = concat!("parse::", stringify!($arg1));
+                }
+                ret.unwrap_or(err)
+            }
+            _ => {
+                $err = concat!("internal ", stringify!($arg1));
+                err
+            }
+        }
+    }};
 }
 
 #[macro_export]
@@ -149,13 +155,13 @@ macro_rules! scan_fmt_some {
 macro_rules! scan_fmt {
     ( $instr:expr, $fmt:expr, $($args:tt),* ) => {
         {
-	    let mut err = "" ;
+            let mut err = "" ;
             let mut res = $crate::parse::scan( $instr, $fmt ) ;
             let result = ($(scan_fmt_help!(no_wrap err,res,$args)),*) ;
-	    if err == "" {
-  	        Ok(result)
-	    } else {
-	        Err($crate::parse::ScanError(err.into()))
+            if err == "" {
+                Ok(result)
+            } else {
+                Err($crate::parse::ScanError(err.into()))
             }
         }
     };
@@ -183,8 +189,9 @@ macro_rules! scanln_fmt_some {
 
 #[cfg(test)]
 macro_rules! assert_flt_eq {
-    ($t:ident, $v1:expr, $v2:expr) =>
-    {{ assert!( ($v1 - $v2).abs() <= 2.0*std::$t::EPSILON ); }};
+    ($t:ident, $v1:expr, $v2:expr) => {{
+        assert!(($v1 - $v2).abs() <= 2.0 * std::$t::EPSILON);
+    }};
 }
 
 #[cfg(test)]
@@ -192,31 +199,31 @@ use std::error::Error;
 
 #[cfg(test)]
 fn ret_scan_all() -> Result<(), Box<dyn Error>> {
-    let (a,b) = scan_fmt!("1.2 e","{f} {x}",f32,[hex u32]) ? ;
+    let (a, b) = scan_fmt!("1.2 e","{f} {x}",f32,[hex u32])?;
     assert_flt_eq!(f32, a, 1.2);
-    assert_eq!(b,14);
+    assert_eq!(b, 14);
     Ok(())
 }
 
 #[test]
 fn test_scan_all() {
-   if let Ok(a) = scan_fmt!("hi1 3","{} {d}",String,u32) {
-     assert_eq!(a, ("hi1".to_string(),3) );
-   } else {
-      assert!(false,"error 0");
-   }
-   if let Ok((a,b,c)) = scan_fmt!("hi1 0xf -3","{} {x} {d}",String,[hex u32],i8) {
-      assert_eq!(a, "hi1");
-      assert_eq!(b, 0xf);
-      assert_eq!(c, -3);
-   } else {
-      assert!(false,"error 1");
-   }
-   let a = scan_fmt!("hi1 f","{} {d}",String,i32) ;
-   assert!(a.is_err());
-   let a = ret_scan_all() ;
-   println!("{:?}",a);
-   assert!(a.is_ok());
+    if let Ok(a) = scan_fmt!("hi1 3", "{} {d}", String, u32) {
+        assert_eq!(a, ("hi1".to_string(), 3));
+    } else {
+        assert!(false, "error 0");
+    }
+    if let Ok((a, b, c)) = scan_fmt!("hi1 0xf -3","{} {x} {d}",String,[hex u32],i8) {
+        assert_eq!(a, "hi1");
+        assert_eq!(b, 0xf);
+        assert_eq!(c, -3);
+    } else {
+        assert!(false, "error 1");
+    }
+    let a = scan_fmt!("hi1 f", "{} {d}", String, i32);
+    assert!(a.is_err());
+    let a = ret_scan_all();
+    println!("{:?}", a);
+    assert!(a.is_ok());
 }
 
 #[test]
@@ -229,7 +236,7 @@ fn test_plus_sign() {
 
 #[test]
 fn test_hex() {
-    let (a,b,c)= scan_fmt_some!("DEV 0xab 0x1234", "{} {x} {x}", String, [hex u32], [hex u64]);
+    let (a, b, c) = scan_fmt_some!("DEV 0xab 0x1234", "{} {x} {x}", String, [hex u32], [hex u64]);
     assert_eq!(a, Some("DEV".into()));
     assert_eq!(b, Some(0xab));
     assert_eq!(c, Some(0x1234));
