@@ -102,9 +102,9 @@ macro_rules! scan_fmt_help {
             _ => None,
         }
     };
-    ( wrap $res:expr , $arg1:tt ) => {
+    ( wrap $res:expr , $($arg1:tt)::* ) => {
         match $res.next() {
-            Some(item) => item.parse::<$arg1>().ok(),
+            Some(item) => item.parse::<$($arg1)::*>().ok(),
             _ => None,
         }
     };
@@ -123,18 +123,18 @@ macro_rules! scan_fmt_help {
             }
         }
     };
-    ( no_wrap $err:ident, $res:expr , $arg1:tt ) => {{
-        let err = "0".parse::<$arg1>().unwrap();
+    ( no_wrap $err:ident, $res:expr , $($arg1:tt)::* ) => {{
+        let err = "0".parse::<$($arg1)::*>().unwrap();
         match $res.next() {
             Some(item) => {
-                let ret = item.parse::<$arg1>();
+                let ret = item.parse::<$($arg1)::*>();
                 if ret.is_err() {
-                    $err = concat!("parse::", stringify!($arg1));
+                    $err = concat!("parse::", stringify!($($arg1)::*));
                 }
                 ret.unwrap_or(err)
             }
             _ => {
-                $err = concat!("internal ", stringify!($arg1));
+                $err = concat!("internal ", stringify!($($arg1)::*));
                 err
             }
         }
@@ -143,21 +143,21 @@ macro_rules! scan_fmt_help {
 
 #[macro_export]
 macro_rules! scan_fmt_some {
-    ( $instr:expr, $fmt:expr, $($args:tt),* ) => {
+    ( $instr:expr, $fmt:expr, $($($args:tt)::*),* ) => {
         {
             let mut res = $crate::parse::scan( $instr, $fmt ) ;
-            ($(scan_fmt_help!(wrap res,$args)),*)
+            ($($crate::scan_fmt_help!(wrap res,$($args)::*)),*)
         }
     };
 }
 
 #[macro_export]
 macro_rules! scan_fmt {
-    ( $instr:expr, $fmt:expr, $($args:tt),* ) => {
+    ( $instr:expr, $fmt:expr, $($($args:tt)::*),* ) => {
         {
             let mut err = "" ;
             let mut res = $crate::parse::scan( $instr, $fmt ) ;
-            let result = ($(scan_fmt_help!(no_wrap err,res,$args)),*) ;
+            let result = ($($crate::scan_fmt_help!(no_wrap err,res,$($args)::*)),*) ;
             if err == "" {
                 Ok(result)
             } else {
@@ -207,7 +207,7 @@ fn ret_scan_all() -> Result<(), Box<dyn Error>> {
 
 #[test]
 fn test_scan_all() {
-    if let Ok(a) = scan_fmt!("hi1 3", "{} {d}", String, u32) {
+    if let Ok(a) = scan_fmt!("hi1 3", "{} {d}", std::string::String, u32) {
         assert_eq!(a, ("hi1".to_string(), 3));
     } else {
         assert!(false, "error 0");
@@ -236,7 +236,7 @@ fn test_plus_sign() {
 
 #[test]
 fn test_hex() {
-    let (a, b, c) = scan_fmt_some!("DEV 0xab 0x1234", "{} {x} {x}", String, [hex u32], [hex u64]);
+    let (a, b, c) = scan_fmt_some!("DEV 0xab 0x1234", "{} {x} {x}", std::string::String, [hex u32], [hex u64]);
     assert_eq!(a, Some("DEV".into()));
     assert_eq!(b, Some(0xab));
     assert_eq!(c, Some(0x1234));

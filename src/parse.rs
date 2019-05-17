@@ -441,7 +441,7 @@ pub fn scan(input_string: &str, format: &str) -> std::vec::IntoIter<String> {
                 let data = get_token(&mut instr, &mut fmt);
                 if fmt.store_result {
                     if fmt.data_type == FmtType::Hex16 {
-                        let no_prefix = data.trim_left_matches("0x");
+                        let no_prefix = data.trim_start_matches("0x");
                         res.push(no_prefix.to_string());
                     } else {
                         res.push(data);
