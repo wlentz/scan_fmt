@@ -1,6 +1,6 @@
 [package]
 name = "scan_fmt"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["wlentz"]
 description = "A simple scanf()-like input for Rust"
 repository = "https://github.com/wlentz/scan_fmt"
