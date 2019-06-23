@@ -44,6 +44,7 @@
 //!       = you must wrap the type in [hex type], e.g. "[hex u32]"
 //!   {f} = return float
 //!   {*d} = "*" as the first character means "match but don't return"
+//!   {2d} or {2x} or {2f} = limit the maximum width to 2.  Any positive integer works.
 //!   {[...]} = return pattern.
 //!     ^ inverts if it is the first character
 //!     - is for ranges.  For a literal - put it at the start or end.
@@ -55,7 +56,7 @@
 //!      If there is a single capture group inside of the slashes then
 //!      that group will make up the pattern.
 //!   Examples:
-//!     {/[0-9ab]/} = same as {[0-9]ab}, above
+//!     {/[0-9ab]/} = same as {[0-9ab]}, above
 //!     {/a+/} = matches at least one `a`, greedily
 //!     {/jj(a*)jj/} = matches any number of `a`s, but only if
 //!       they're surrounded by two `j`s
@@ -236,7 +237,8 @@ fn test_plus_sign() {
 
 #[test]
 fn test_hex() {
-    let (a, b, c) = scan_fmt_some!("DEV 0xab 0x1234", "{} {x} {x}", std::string::String, [hex u32], [hex u64]);
+    let (a, b, c) =
+        scan_fmt_some!("DEV 0xab 0x1234", "{} {x} {x}", std::string::String, [hex u32], [hex u64]);
     assert_eq!(a, Some("DEV".into()));
     assert_eq!(b, Some(0xab));
     assert_eq!(c, Some(0x1234));
@@ -270,4 +272,20 @@ fn test_skip_assign() {
     let (a, b) = scan_fmt_some!("1 2 3, 4 5, 6 7", "{[^,]},{*[^,]},{[^,]}", String, String);
     assert_eq!(a.unwrap(), "1 2 3");
     assert_eq!(b.unwrap(), "6 7");
+    let a = scan_fmt!("1 2 3, 4 5, 6 7", "{[^,]},{*[^,]},{[^,]}", String, String).unwrap();
+    assert_eq!(a.0, "1 2 3");
+    assert_eq!(a.1, "6 7");
+}
+
+#[test]
+fn test_width_specifier() {
+    let a = scan_fmt!("123ab71 2.1234",
+                      "{1d}{2d}{3x}{4d}{3f}",
+                      u8, u8, [hex u16], u16, f32)
+    .unwrap();
+    assert_eq!(a.0, 1);
+    assert_eq!(a.1, 23);
+    assert_eq!(a.2, 0xab7);
+    assert_eq!(a.3, 1);
+    assert_flt_eq!(f32, a.4, 2.1);
 }

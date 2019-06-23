@@ -10,6 +10,7 @@ Currently the format string supports the following special sequences:
    {x} = return hex (0xab or ab)
    {f} = return float
    {*d} = "*" as the first character means "match but don't return"
+   {2d} or {2x} or {2f} = limit the maximum width to 2.  Any positive integer works.
    {[...]} = return pattern.
      ^ inverts if it is the first character
      - is for ranges.  For a literal - put it at the start or end.
@@ -21,7 +22,7 @@ Currently the format string supports the following special sequences:
      If there is a single capture group inside of the slashes then
      that group will make up the pattern.
    Examples:
-     {/[0-9ab]/} = same as {[0-9]ab}, above
+     {/[0-9ab]/} = same as {[0-9ab]}, above
      {/a+/} = matches at least one `a`, greedily
      {/jj(a*)jj/} = matches any number of `a`s, but only if
        they're surrounded by two `j`s

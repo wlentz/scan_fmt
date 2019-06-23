@@ -46,11 +46,16 @@ impl fmt::Display for ScanError {
 struct VecScanner {
     data: Vec<char>,
     pos: usize,
+    limit_pos: usize, // if non-0, then inc_limit() returns when 'pos' gets here
 }
 
 impl VecScanner {
     fn new(d: Vec<char>) -> VecScanner {
-        VecScanner { data: d, pos: 0 }
+        VecScanner {
+            data: d,
+            pos: 0,
+            limit_pos: 0,
+        }
     }
 
     fn cur(&self) -> char {
@@ -69,9 +74,32 @@ impl VecScanner {
         self.pos >= self.data.len()
     }
 
+    // returns true if we have more data
     fn inc(&mut self) -> bool {
         self.pos += 1;
         !self.is_end()
+    }
+
+    // set the maximum position for inc_limit()
+    fn start_inc_limit(&mut self, max_length: Option<usize>) {
+        match max_length {
+            Some(n) => {
+                self.limit_pos = self.pos + n;
+            }
+            None => {
+                self.limit_pos = 0;
+            }
+        }
+    }
+
+    fn hit_inc_limit(&mut self) -> bool {
+        self.limit_pos > 0 && self.pos >= self.limit_pos
+    }
+
+    // same as inc(), but also honors start_inc_limit(max_length)
+    fn inc_limit(&mut self) -> bool {
+        self.pos += 1;
+        !(self.is_end() || self.hit_inc_limit())
     }
 }
 
@@ -96,6 +124,7 @@ fn skip_whitespace(vs: &mut VecScanner) -> bool {
 
 struct FmtResult {
     data_type: FmtType,
+    max_length: Option<usize>,
     store_result: bool,
     invert_char_list: bool,
     end_char: char,
@@ -112,6 +141,7 @@ struct FmtResult {
 fn get_format(fstr: &mut VecScanner) -> Option<FmtResult> {
     let mut res = FmtResult {
         data_type: FmtType::NonWhitespaceOrEnd,
+        max_length: None,
         end_char: ' ',
         store_result: true,
         invert_char_list: false,
@@ -131,6 +161,18 @@ fn get_format(fstr: &mut VecScanner) -> Option<FmtResult> {
             res.end_char = fstr.cur();
         }
         return Some(res);
+    }
+
+    // Read optional field width specifier (e.g., the "2" in {2d})
+    let pos_start = fstr.pos;
+    while fstr.cur().is_digit(10) {
+        if !fstr.inc() {
+            return None;
+        }
+    }
+    if fstr.pos > pos_start {
+        let max_length_string: String = fstr.data[pos_start..fstr.pos].iter().cloned().collect();
+        res.max_length = max_length_string.parse::<usize>().ok();
     }
 
     match fstr.cur() {
@@ -263,19 +305,26 @@ fn handle_regex(mut res: FmtResult, fstr: &mut VecScanner) -> Option<FmtResult> 
     Some(res)
 }
 
-// advance past base-10 decimal
-fn scan_dec10(vs: &mut VecScanner) {
+fn scan_dec10(vs: &mut VecScanner, max_length: Option<usize>) {
+    // look for [+-]{0,1}[0-9]+, up to max_length characters
+    vs.start_inc_limit(max_length);
+    scan_dec10_nest(vs);
+}
+
+// advance past base-10 decimal - assumes someone has called start_inc_limit()
+fn scan_dec10_nest(vs: &mut VecScanner) {
     // look for [+-]{0,1}[0-9]+
     match vs.cur() {
         '+' | '-' => {
-            if !vs.inc() {
+            if !vs.inc_limit() {
                 return;
             }
         }
         _ => (),
     }
+
     while vs.cur().is_digit(10) {
-        if !vs.inc() {
+        if !vs.inc_limit() {
             return;
         }
     }
@@ -283,19 +332,20 @@ fn scan_dec10(vs: &mut VecScanner) {
 
 // advance past base-16 hex
 // look for (0x){0,1}[0-9a-fA-F]+
-fn scan_hex16(vs: &mut VecScanner) {
+fn scan_hex16(vs: &mut VecScanner, max_length: Option<usize>) {
+    vs.start_inc_limit(max_length);
     if vs.cur() == '0' {
-        if !vs.inc() {
+        if !vs.inc_limit() {
             return;
         }
     }
     if vs.cur() == 'x' {
-        if !vs.inc() {
+        if !vs.inc_limit() {
             return;
         }
     }
     while vs.cur().is_digit(16) {
-        if !vs.inc() {
+        if !vs.inc_limit() {
             return;
         };
     }
@@ -305,23 +355,24 @@ fn scan_hex16(vs: &mut VecScanner) {
 // look for [+-]{0,1}[0-9]+
 // then optional .[0-9]+
 // then optional e[+-]{1}[0-9]+
-fn scan_float(vs: &mut VecScanner) {
-    scan_dec10(vs);
+fn scan_float(vs: &mut VecScanner, max_length: Option<usize>) {
+    vs.start_inc_limit(max_length);
+    scan_dec10_nest(vs);
     if vs.cur() == '.' {
-        if !vs.inc() {
+        if !vs.inc_limit() {
             return;
         }
         while vs.cur().is_digit(10) {
-            if !vs.inc() {
+            if !vs.inc_limit() {
                 return;
             }
         }
     }
     if vs.cur() == 'e' {
-        if !vs.inc() {
+        if !vs.inc_limit() {
             return;
         }
-        scan_dec10(vs);
+        scan_dec10_nest(vs);
     }
 }
 
@@ -380,9 +431,9 @@ fn get_token(vs: &mut VecScanner, fmt: &mut FmtResult) -> String {
     let mut pos_start = vs.pos;
     match fmt.data_type {
         FmtType::NonWhitespaceOrEnd => scan_nonws_or_end(vs, fmt.end_char),
-        FmtType::Dec10 => scan_dec10(vs),
-        FmtType::Hex16 => scan_hex16(vs),
-        FmtType::Flt => scan_float(vs),
+        FmtType::Dec10 => scan_dec10(vs, fmt.max_length),
+        FmtType::Hex16 => scan_hex16(vs, fmt.max_length),
+        FmtType::Flt => scan_float(vs, fmt.max_length),
         FmtType::Pattern => scan_pattern(vs, fmt),
         #[cfg(feature = "regex")]
         FmtType::Regex => {
@@ -540,6 +591,16 @@ fn test_pattern() {
     let mut res = scan("xyz  01234567λ89", "xyz {[40-3]}{*[65]}{[7-78-9λ]}");
     assert_eq!(res.next().unwrap(), "01234");
     assert_eq!(res.next().unwrap(), "7λ89");
+}
+
+#[test]
+fn test_width() {
+    let mut res = scan("01123fe071 432", "{2d}{3d}{4x}{2d} {3d}");
+    assert_eq!(res.next().unwrap(), "01");
+    assert_eq!(res.next().unwrap(), "123");
+    assert_eq!(res.next().unwrap(), "fe07");
+    assert_eq!(res.next().unwrap(), "1");
+    assert_eq!(res.next().unwrap(), "432");
 }
 
 #[cfg(test)]
