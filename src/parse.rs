@@ -18,7 +18,7 @@ enum FmtType {
 
 use std::{error::Error, fmt};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ScanError(pub String);
 
 impl Error for ScanError {}

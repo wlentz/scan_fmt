@@ -289,3 +289,11 @@ fn test_width_specifier() {
     assert_eq!(a.3, 1);
     assert_flt_eq!(f32, a.4, 2.1);
 }
+
+#[test]
+fn test_err_equals() {
+    let a = scan_fmt!("hi 123",
+                      "hi {d",
+                      u8) ;
+    assert_eq!(a, Err(parse::ScanError("internal u8".to_string())));
+}
