@@ -8,7 +8,8 @@ license = "MIT"
 readme = "README.md"
 
 [features]
-default = ["regex"]
+default = ["regex", "std"]
+std = []
 
 [dependencies]
 regex = { version = "1", optional = true }
