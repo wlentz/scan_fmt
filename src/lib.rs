@@ -129,7 +129,9 @@ macro_rules! scan_fmt_help {
         match $res.next() {
             Some(item) => {
                 let ret = item.parse::<$($arg1)::*>();
-                if ret.is_err() {
+                if(item == "") {
+                    $err = "match::none";
+                } else if ret.is_err() {
                     $err = concat!("parse::", stringify!($($arg1)::*));
                 }
                 ret.unwrap_or(err)
@@ -296,4 +298,23 @@ fn test_err_equals() {
                       "hi {d",
                       u8) ;
     assert_eq!(a, Err(parse::ScanError("internal u8".to_string())));
+}
+
+#[test]
+fn test_no_post_match_regex()
+{
+    let a = scan_fmt!("74in", "{d}{/in/}", u8, String);
+    assert_eq!(a, Ok((74, String::from("in"))));
+    let a = scan_fmt!("74in", "{d}{/cm/}", u8, String);
+    assert_eq!(a, Err(parse::ScanError("match::none".to_string())));
+}
+
+#[test]
+fn test_no_post_match() {
+
+    let a = scan_fmt!("17in", "{d}in", u8);
+    assert_eq!(a, Ok(17 as u8));
+
+    let a = scan_fmt!("17in", "{d}cm", u8);
+    assert_eq!(a, Err(parse::ScanError("match::none".to_string())));
 }
