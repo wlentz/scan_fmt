@@ -294,15 +294,12 @@ fn test_width_specifier() {
 
 #[test]
 fn test_err_equals() {
-    let a = scan_fmt!("hi 123",
-                      "hi {d",
-                      u8) ;
+    let a = scan_fmt!("hi 123", "hi {d", u8);
     assert_eq!(a, Err(parse::ScanError("internal u8".to_string())));
 }
 
 #[test]
-fn test_no_post_match_regex()
-{
+fn test_no_post_match_regex() {
     let a = scan_fmt!("74in", "{d}{/in/}", u8, String);
     assert_eq!(a, Ok((74, String::from("in"))));
     let a = scan_fmt!("74in", "{d}{/cm/}", u8, String);
@@ -311,9 +308,8 @@ fn test_no_post_match_regex()
 
 #[test]
 fn test_no_post_match() {
-
     let a = scan_fmt!("17in", "{d}in", u8);
-    assert_eq!(a, Ok(17 as u8));
+    assert_eq!(a, Ok(17u8));
 
     let a = scan_fmt!("17in", "{d}cm", u8);
     assert_eq!(a, Err(parse::ScanError("match::none".to_string())));
