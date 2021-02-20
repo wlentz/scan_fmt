@@ -1,6 +1,6 @@
 // Copyright 2015-2019 Will Lentz.
 // Licensed under the MIT license.
-use std;
+use alloc::string::{String, ToString};
 
 #[cfg(feature = "regex")]
 use regex::Regex;
@@ -16,11 +16,16 @@ enum FmtType {
     Regex,
 }
 
-use std::{error::Error, fmt};
+#[cfg(feature = "std")]
+use std::error::Error;
+
+use alloc::vec::Vec;
+use core::fmt;
 
 #[derive(Debug, PartialEq)]
 pub struct ScanError(pub String);
 
+#[cfg(feature = "std")]
 impl Error for ScanError {}
 
 impl fmt::Display for ScanError {
@@ -418,7 +423,7 @@ fn scan_regex(vs: &mut VecScanner, fmt: &mut FmtResult) -> ReMatch {
     let re = fmt.regex.take().unwrap();
     let remainder = vs.data[vs.pos..].iter().cloned().collect::<String>();
     if let Some(mat) = re.captures(&remainder) {
-        vs.pos += mat.get(0).unwrap().end();
+        vs.pos += remainder[..mat.get(0).unwrap().end()].chars().count();
         if let Some(cap) = mat.get(1) {
             return ReMatch::Captured { len: cap.end() };
         }
@@ -464,7 +469,7 @@ fn get_token(vs: &mut VecScanner, fmt: &mut FmtResult) -> String {
 // Extract String tokens from the input string based on
 // the format string.  See lib.rs for more info.
 // Returns an iterator of the String results.
-pub fn scan(input_string: &str, format: &str) -> std::vec::IntoIter<String> {
+pub fn scan(input_string: &str, format: &str) -> alloc::vec::IntoIter<String> {
     let mut res: Vec<String> = vec![];
     let mut fmtstr = VecScanner::new(format.chars().collect());
     let mut instr = VecScanner::new(input_string.chars().collect());
@@ -485,10 +490,12 @@ pub fn scan(input_string: &str, format: &str) -> std::vec::IntoIter<String> {
                 // got an escaped {{
             } else {
                 let fmt = get_format(&mut fmtstr);
-                if !fmt.is_some() {
+                let mut fmt = if let Some(fmt) = fmt {
+                    fmt
+                } else {
                     break;
-                }
-                let mut fmt = fmt.unwrap();
+                };
+
                 let data = get_token(&mut instr, &mut fmt);
                 if fmt.store_result {
                     if fmt.data_type == FmtType::Hex16 {
@@ -605,7 +612,7 @@ fn test_width() {
     assert_eq!(res.next().unwrap(), "432");
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "regex"))]
 mod test_regex {
     use super::scan;
 
@@ -625,18 +632,18 @@ mod test_regex {
     fn bad_pattern() {
         // note the extra close paren
         let mut scanner = scan("one (hello)) two", "one ({/[^)]+/}) two");
-
         assert_eq!(scanner.next().unwrap(), "");
-        // why should this result in "hello" if the pattern was bad?
-        //assert_eq!(scanner.next().unwrap(), "hello");
-        //if let Some(v) = scanner.next() {
-        //    println!("got something unexpected on second iter: {:?}", v);
-        //}
     }
 
     #[test]
     fn uses_group_if_present() {
         let mut res = scan("one (((hello))) two", r#"one {/(\(.*\)) /}two"#);
         assert_eq!(res.next().unwrap(), "(((hello)))");
+    }
+
+    #[test]
+    fn unicode() {
+        let mut res = scan("й", "{/.*/}");
+        assert_eq!(res.next().unwrap(), "й");
     }
 }
