@@ -90,8 +90,16 @@
 //!
 //! Conversion to output values is done using parse::<T>().
 
+#![no_std]
+
 #[cfg(feature = "regex")]
 extern crate regex;
+
+#[cfg(any(test, doctest, feature = "std"))]
+extern crate std;
+
+#[macro_use]
+extern crate alloc;
 
 pub mod parse;
 
@@ -168,25 +176,38 @@ macro_rules! scan_fmt {
     };
 }
 
-pub fn get_input_unwrap() -> String {
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input).unwrap();
-    input
+#[cfg(feature = "std")]
+pub use std_features::*;
+
+#[cfg(feature = "std")]
+mod std_features {
+    use std::string::String;
+
+    pub fn get_input_unwrap() -> String {
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).unwrap();
+        input
+    }
+
+    /// (a,+) = scanln_fmt!( format_string, types,+ )
+    /// <p>Same as scan_fmt!(), but reads input string from stdin.</p>
+    #[macro_export]
+    macro_rules! scanln_fmt {
+        ($($arg:tt)*) => {{ scan_fmt!(&$crate::get_input_unwrap(), $($arg)*) }}
+    }
+
+    /// (a,+) = scanln_fmt_some!( format_string, types,+ )
+    /// <p>Same as scan_fmt_some!(), but reads input string from stdin.</p>
+    #[macro_export]
+    macro_rules! scanln_fmt_some {
+        ($($arg:tt)*) => {{ scan_fmt_some!(&$crate::get_input_unwrap(), $($arg)*) }}
+    }
 }
 
-/// (a,+) = scanln_fmt!( format_string, types,+ )
-/// <p>Same as scan_fmt!(), but reads input string from stdin.</p>
-#[macro_export]
-macro_rules! scanln_fmt {
-    ($($arg:tt)*) => {{ scan_fmt!(&$crate::get_input_unwrap(), $($arg)*) }}
-}
-
-/// (a,+) = scanln_fmt_some!( format_string, types,+ )
-/// <p>Same as scan_fmt_some!(), but reads input string from stdin.</p>
-#[macro_export]
-macro_rules! scanln_fmt_some {
-    ($($arg:tt)*) => {{ scan_fmt_some!(&$crate::get_input_unwrap(), $($arg)*) }}
-}
+#[cfg(test)]
+use alloc::string::{String, ToString};
+#[cfg(test)]
+use parse::ScanError;
 
 #[cfg(test)]
 macro_rules! assert_flt_eq {
@@ -196,10 +217,7 @@ macro_rules! assert_flt_eq {
 }
 
 #[cfg(test)]
-use std::error::Error;
-
-#[cfg(test)]
-fn ret_scan_all() -> Result<(), Box<dyn Error>> {
+fn ret_scan_all() -> Result<(), ScanError> {
     let (a, b) = scan_fmt!("1.2 e","{f} {x}",f32,[hex u32])?;
     assert_flt_eq!(f32, a, 1.2);
     assert_eq!(b, 14);
@@ -223,7 +241,7 @@ fn test_scan_all() {
     let a = scan_fmt!("hi1 f", "{} {d}", String, i32);
     assert!(a.is_err());
     let a = ret_scan_all();
-    println!("{:?}", a);
+    std::println!("{:?}", a);
     assert!(a.is_ok());
 }
 

@@ -1,6 +1,6 @@
 // Copyright 2015-2019 Will Lentz.
 // Licensed under the MIT license.
-use std;
+use alloc::string::{String, ToString};
 
 #[cfg(feature = "regex")]
 use regex::Regex;
@@ -16,11 +16,16 @@ enum FmtType {
     Regex,
 }
 
-use std::{error::Error, fmt};
+#[cfg(feature = "std")]
+use std::error::Error;
+
+use alloc::vec::Vec;
+use core::fmt;
 
 #[derive(Debug, PartialEq)]
 pub struct ScanError(pub String);
 
+#[cfg(feature = "std")]
 impl Error for ScanError {}
 
 impl fmt::Display for ScanError {
@@ -464,7 +469,7 @@ fn get_token(vs: &mut VecScanner, fmt: &mut FmtResult) -> String {
 // Extract String tokens from the input string based on
 // the format string.  See lib.rs for more info.
 // Returns an iterator of the String results.
-pub fn scan(input_string: &str, format: &str) -> std::vec::IntoIter<String> {
+pub fn scan(input_string: &str, format: &str) -> alloc::vec::IntoIter<String> {
     let mut res: Vec<String> = vec![];
     let mut fmtstr = VecScanner::new(format.chars().collect());
     let mut instr = VecScanner::new(input_string.chars().collect());
@@ -603,7 +608,7 @@ fn test_width() {
     assert_eq!(res.next().unwrap(), "432");
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "regex"))]
 mod test_regex {
     use super::scan;
 
@@ -625,7 +630,7 @@ mod test_regex {
         let mut scanner = scan("one (hello)) two", "one ({/[^)]+/}) two");
         assert_eq!(scanner.next().unwrap(), "hello");
         if let Some(v) = scanner.next() {
-            println!("got something unexpected on second iter: {:?}", v);
+            std::println!("got something unexpected on second iter: {:?}", v);
         }
     }
 
