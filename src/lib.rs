@@ -310,8 +310,6 @@ fn test_width_specifier() {
 
 #[test]
 fn test_err_equals() {
-    let a = scan_fmt!("hi 123",
-                      "hi {d",
-                      u8) ;
+    let a = scan_fmt!("hi 123", "hi {d", u8);
     assert_eq!(a, Err(parse::ScanError("internal u8".to_string())));
 }

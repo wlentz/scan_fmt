@@ -423,7 +423,7 @@ fn scan_regex(vs: &mut VecScanner, fmt: &mut FmtResult) -> ReMatch {
     let re = fmt.regex.take().unwrap();
     let remainder = vs.data[vs.pos..].iter().cloned().collect::<String>();
     if let Some(mat) = re.captures(&remainder) {
-        vs.pos += mat.get(0).unwrap().end();
+        vs.pos += remainder[..mat.get(0).unwrap().end()].chars().count();
         if let Some(cap) = mat.get(1) {
             return ReMatch::Captured { len: cap.end() };
         }
@@ -490,10 +490,12 @@ pub fn scan(input_string: &str, format: &str) -> alloc::vec::IntoIter<String> {
                 // got an escaped {{
             } else {
                 let fmt = get_format(&mut fmtstr);
-                if !fmt.is_some() {
+                let mut fmt = if let Some(fmt) = fmt {
+                    fmt
+                } else {
                     break;
-                }
-                let mut fmt = fmt.unwrap();
+                };
+
                 let data = get_token(&mut instr, &mut fmt);
                 if fmt.store_result {
                     if fmt.data_type == FmtType::Hex16 {
@@ -638,5 +640,11 @@ mod test_regex {
     fn uses_group_if_present() {
         let mut res = scan("one (((hello))) two", r#"one {/(\(.*\)) /}two"#);
         assert_eq!(res.next().unwrap(), "(((hello)))");
+    }
+
+    #[test]
+    fn unicode() {
+        let mut res = scan("й", "{/.*/}");
+        assert_eq!(res.next().unwrap(), "й");
     }
 }
