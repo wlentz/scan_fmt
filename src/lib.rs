@@ -133,7 +133,13 @@ macro_rules! scan_fmt_help {
         }
     };
     ( no_wrap $err:ident, $res:expr , $($arg1:tt)::* ) => {{
-        let err = "0".parse::<$($arg1)::*>().unwrap();
+        // We need to return a value of type $($arg1)::* if parsing fails.
+        // Is there a better way?
+        let mut err = "0".parse::<$($arg1)::*>(); // most types
+        if err.is_err() {
+           err = "0.0.0.0".parse::<$($arg1)::*>(); // IpAddr
+        }
+        let err = err.unwrap();
         match $res.next() {
             Some(item) => {
                 let ret = item.parse::<$($arg1)::*>();
@@ -331,4 +337,13 @@ fn test_no_post_match() {
 
     let a = scan_fmt!("17in", "{d}cm", u8);
     assert_eq!(a, Err(parse::ScanError("match::none".to_string())));
+}
+
+#[test]
+fn test_ip_addr() {
+    let a = scan_fmt!("x 185.187.165.163 y", "x {} y", std::net::IpAddr);
+    assert_eq!(
+        a.unwrap(),
+        std::net::IpAddr::V4(std::net::Ipv4Addr::new(185, 187, 165, 163))
+    );
 }
