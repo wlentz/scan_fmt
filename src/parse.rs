@@ -517,7 +517,9 @@ pub fn scan(input_string: &str, format: &str) -> alloc::vec::IntoIter<String> {
         }
         if do_compare {
             if fmtstr.cur() != instr.cur() {
-                break;
+                return vec![String::from("")].into_iter();
+                // we had a non match! --> if we only break here we will return all matches found so far.
+                // This will create a misbehaviour when there is something like `{d}in` as the in is not cared for.
             }
             if !fmtstr.inc() {
                 break;
@@ -630,10 +632,7 @@ mod test_regex {
     fn bad_pattern() {
         // note the extra close paren
         let mut scanner = scan("one (hello)) two", "one ({/[^)]+/}) two");
-        assert_eq!(scanner.next().unwrap(), "hello");
-        if let Some(v) = scanner.next() {
-            std::println!("got something unexpected on second iter: {:?}", v);
-        }
+        assert_eq!(scanner.next().unwrap(), "");
     }
 
     #[test]
