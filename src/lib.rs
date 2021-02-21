@@ -49,6 +49,8 @@
 //!     ^ inverts if it is the first character
 //!     - is for ranges.  For a literal - put it at the start or end.
 //!     To add a literal ] do "[]abc]"
+//!   {e} = doesn't return a value, but matches end of line.  Use this if you
+//!         don't want to ignore potential extra characters at end of input.
 //!   Examples:
 //!     {[0-9ab]} = match 0-9 or a or b
 //!     {[^,.]} = match anything but , or .
@@ -336,6 +338,14 @@ fn test_no_post_match() {
     assert_eq!(a, Ok(17u8));
 
     let a = scan_fmt!("17in", "{d}cm", u8);
+    assert_eq!(a, Err(parse::ScanError("match::none".to_string())));
+}
+
+#[test]
+fn test_match_end() {
+    let a = scan_fmt!("17in", "{d}in{e}", u8);
+    assert_eq!(a, Ok(17u8));
+    let a = scan_fmt!("17ink", "{d}in{e}", u8);
     assert_eq!(a, Err(parse::ScanError("match::none".to_string())));
 }
 

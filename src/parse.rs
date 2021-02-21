@@ -8,6 +8,7 @@ use regex::Regex;
 #[derive(Debug, PartialEq)]
 enum FmtType {
     NonWhitespaceOrEnd,
+    OnlyEnd,
     Pattern,
     Dec10,
     Hex16,
@@ -182,6 +183,9 @@ fn get_format(fstr: &mut VecScanner) -> Option<FmtResult> {
 
     match fstr.cur() {
         's' => { /* already FmtType::NonWhitespaceOrEnd */ }
+        'e' => {
+            res.data_type = FmtType::OnlyEnd;
+        }
         'd' => {
             res.data_type = FmtType::Dec10;
         }
@@ -435,6 +439,7 @@ fn scan_regex(vs: &mut VecScanner, fmt: &mut FmtResult) -> ReMatch {
 fn get_token(vs: &mut VecScanner, fmt: &mut FmtResult) -> String {
     let mut pos_start = vs.pos;
     match fmt.data_type {
+        FmtType::OnlyEnd => {} // handled in scan()
         FmtType::NonWhitespaceOrEnd => scan_nonws_or_end(vs, fmt.end_char),
         FmtType::Dec10 => scan_dec10(vs, fmt.max_length),
         FmtType::Hex16 => scan_hex16(vs, fmt.max_length),
@@ -496,6 +501,10 @@ pub fn scan(input_string: &str, format: &str) -> alloc::vec::IntoIter<String> {
                     break;
                 };
 
+                if fmt.data_type == FmtType::OnlyEnd && !instr.is_end() {
+                    // we didn't get an end of input where expected, so invalidate any matches
+                    return vec![String::from("")].into_iter();
+                }
                 let data = get_token(&mut instr, &mut fmt);
                 if fmt.store_result {
                     if fmt.data_type == FmtType::Hex16 {
@@ -610,6 +619,15 @@ fn test_width() {
     assert_eq!(res.next().unwrap(), "fe07");
     assert_eq!(res.next().unwrap(), "1");
     assert_eq!(res.next().unwrap(), "432");
+}
+
+#[test]
+fn match_end() {
+    let mut res = scan("12 hi", "{d} hi{e}");
+    assert_eq!(res.next().unwrap(), "12");
+    assert_eq!(res.next(), None);
+    let mut res = scan("12 hi2", "{d} hi{e}");
+    assert_eq!(res.next().unwrap(), "");
 }
 
 #[cfg(all(test, feature = "regex"))]
