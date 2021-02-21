@@ -15,6 +15,8 @@ Currently the format string supports the following special sequences:
      ^ inverts if it is the first character
      - is for ranges.  For a literal - put it at the start or end.
      To add a literal ] do "[]abc]"
+   {e} = doesn't return a value, but matches end of line.  Use this if you
+         don't want to ignore potential extra characters at end of input.
    Examples:
      {[0-9ab]} = match 0-9 or a or b
      {[^,.]} = match anything but , or .
