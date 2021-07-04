@@ -4,34 +4,33 @@
 //! This crate provides a simple sscanf()-like interface to extract
 //! data from strings and stdin.
 //!
-//! In version 0.2 scan_fmt! changed to return a Result.
-//! Use scan_fmt_some! for the 0.1.x behavior.
+//! In version 0.2 [`scan_fmt!`] changed to return a Result.
+//! Use [`scan_fmt_some!`] for the 0.1.x behavior.
 //!
-//! To use this crate, do:
+//! To use this crate, import macros that you want to use, e.g.:
 //!
-//! ```ignore
-//! #[macro_use] extern crate scan_fmt;
+//! ```
+//! use scan_fmt::scan_fmt;
 //! ```
 //!
 //! Example to read from a string:
 //!
 //! ```rust
-//! # #[macro_use] extern crate scan_fmt;
-//! # fn main() {
-//!   if let Ok((a,b)) = scan_fmt!( "-11 0x22", // input string
-//!                                 "{d} {x}",  // format
-//!                                 i8, [hex u8]) { // types
+//! use scan_fmt::{scan_fmt, scan_fmt_some};
+//!
+//! if let Ok((a,b)) = scan_fmt!( "-11 0x22", // input string
+//!                               "{d} {x}",  // format
+//!                               i8, [hex u8]) { // types
 //!     assert_eq!( a, -11 ) ;
 //!     assert_eq!( b, 0x22 ) ;
-//!   }
+//! }
 //!
-//!   let (a,b,c) = scan_fmt_some!( "hello 12 345 bye", // input string
-//!                                 "hello {} {d} {}",  // format
-//!                                 u8, i32, String);   // type of a-c Options
-//!   assert_eq!( a, Some(12) ) ;
-//!   assert_eq!( b, Some(345) ) ;
-//!   assert_eq!( c, Some("bye".into()) ) ;
-//! # }
+//! let (a,b,c) = scan_fmt_some!( "hello 12 345 bye", // input string
+//!                               "hello {} {d} {}",  // format
+//!                               u8, i32, String);   // type of a-c Options
+//! assert_eq!( a, Some(12) ) ;
+//! assert_eq!( b, Some(345) ) ;
+//! assert_eq!( c, Some("bye".into()) ) ;
 //! ```
 //!
 //! Special format_string tokens:
@@ -67,20 +66,22 @@
 //! Example to read from stdin:
 //!
 //! ```ignore
-//! # #[macro_use] extern crate scan_fmt;
-//! # use std::error::Error ;
-//! # fn main() -> Result<(),Box<dyn Error>> {
+//! use scan_fmt::{scanln_fmt, scanln_fmt_some};
+//!
+//! use std::error::Error ;
+//!
+//! fn main() -> Result<(), Box<dyn Error>> {
 //!     let (a,b) = scanln_fmt!( "{}-{}", u16, u8) ? ;
 //!     println!("Got {} and {}",a,b);
 //!
 //!     let (a,b) = scanln_fmt_some!( "{}-{}",   // format
-//!                                  u16, u8);    // type of a&b Options
+//!                                  u16, u8);   // type of a&b Options
 //!     match (a,b) {
 //!       (Some(aa),Some(bb)) => println!("Got {} and {}",aa,bb),
 //!       _ => println!("input error")
 //!     }
 //!     Ok(())
-//! # }
+//! }
 //! ```
 //!
 //! ## LIMITATIONS:
@@ -93,9 +94,6 @@
 //! Conversion to output values is done using parse::<T>().
 
 #![no_std]
-
-#[cfg(feature = "regex")]
-extern crate regex;
 
 #[cfg(any(test, doctest, feature = "std"))]
 extern crate std;
@@ -203,14 +201,14 @@ mod std_features {
     /// <p>Same as scan_fmt!(), but reads input string from stdin.</p>
     #[macro_export]
     macro_rules! scanln_fmt {
-        ($($arg:tt)*) => {{ scan_fmt!(&$crate::get_input_unwrap(), $($arg)*) }}
+        ($($arg:tt)*) => {{ $crate::scan_fmt!(&$crate::get_input_unwrap(), $($arg)*) }}
     }
 
     /// (a,+) = scanln_fmt_some!( format_string, types,+ )
     /// <p>Same as scan_fmt_some!(), but reads input string from stdin.</p>
     #[macro_export]
     macro_rules! scanln_fmt_some {
-        ($($arg:tt)*) => {{ scan_fmt_some!(&$crate::get_input_unwrap(), $($arg)*) }}
+        ($($arg:tt)*) => {{ $crate::scan_fmt_some!(&$crate::get_input_unwrap(), $($arg)*) }}
     }
 }
 

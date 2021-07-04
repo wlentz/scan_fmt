@@ -1,6 +1,7 @@
 [package]
 name = "scan_fmt"
 version = "0.2.6"
+edition = "2018"
 authors = ["wlentz"]
 description = "A simple scanf()-like input for Rust"
 repository = "https://github.com/wlentz/scan_fmt"
@@ -13,7 +14,3 @@ std = []
 
 [dependencies]
 regex = { version = "1", optional = true }
-
-[lib]
-name = "scan_fmt"
-path = "src/lib.rs"

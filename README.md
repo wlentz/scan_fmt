@@ -32,7 +32,7 @@ Currently the format string supports the following special sequences:
 
 ### Examples
 ```rust
- #[macro_use] extern crate scan_fmt;
+ use scan_fmt::{scan_fmt, scan_fmt_some, scanln_fmt} ;
  use std::error::Error ;
  fn main() -> Result<(),Box<dyn Error>> {
    let (a,b,c) = scan_fmt!( "hello 0x12 345 bye",  // input string
