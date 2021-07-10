@@ -367,6 +367,9 @@ fn scan_hex16(vs: &mut VecScanner, max_length: Option<usize>) {
 fn scan_float(vs: &mut VecScanner, max_length: Option<usize>) {
     vs.start_inc_limit(max_length);
     scan_dec10_nest(vs);
+    if vs.is_end() || vs.hit_inc_limit() {
+        return;
+    }
     if vs.cur() == '.' {
         if !vs.inc_limit() {
             return;
@@ -619,6 +622,13 @@ fn test_width() {
     assert_eq!(res.next().unwrap(), "fe07");
     assert_eq!(res.next().unwrap(), "1");
     assert_eq!(res.next().unwrap(), "432");
+}
+
+#[test]
+fn test_integer_for_float() {
+    let mut res = scan("1000", "{f}");
+    assert_eq!(res.next().unwrap(), "1000");
+    assert_eq!(res.next(), None);
 }
 
 #[test]
