@@ -324,6 +324,7 @@ fn test_err_equals() {
     assert_eq!(a, Err(parse::ScanError("internal u8".to_string())));
 }
 
+#[cfg(feature = "regex")]
 #[test]
 fn test_no_post_match_regex() {
     let a = scan_fmt!("74in", "{d}{/in/}", u8, String);
