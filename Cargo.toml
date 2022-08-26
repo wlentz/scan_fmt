@@ -12,7 +12,7 @@ default = ["regex", "std"]
 std = []
 
 [dependencies]
-regex = { version = "1", optional = true }
+regex = { version = "1.6", optional = true }
 
 [lib]
 name = "scan_fmt"
