@@ -58,4 +58,4 @@ Currently the format string supports the following special sequences:
 ```
 
 ### Limitations
-There is no compile-time warning if the number of {}'s in the format string doesn't match the number of return values.  You'll just get None for extra return values.  See src/lib.rs for more details.
+There is no compile-time warning if the number of {}'s in the format string doesn't match the number of return values.  You'll just get None for extra return values.  See src/lib.rs for more details. Also, a trailing comma at the end of the macro invocation is treated as an undeclared type.

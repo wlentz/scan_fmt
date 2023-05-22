@@ -85,8 +85,10 @@
 //!
 //! ## LIMITATIONS:
 //! There are no compile-time checks to make sure the format
-//! strings matches the number of return arguments.  Extra
-//! return values will be None or cause a Result error.
+//! strings matches the number of return arguments. Also, a
+//! trailing comma at the end of the macro invocation is
+//! treated as an undeclared type. Extra return values will
+//! be None or cause a Result error.
 //!
 //! Like sscanf(), whitespace (including \n) is largely ignored.
 //!
